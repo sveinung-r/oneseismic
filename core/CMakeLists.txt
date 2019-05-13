@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(js LANGUAGES CXX)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 include(CheckIncludeFile)
 include(CTest)
 include(GNUInstallDirs)
@@ -13,6 +15,13 @@ add_library(clara INTERFACE)
 target_include_directories(clara INTERFACE external/clara)
 
 find_package(segyio REQUIRED)
+
+find_package(Boost REQUIRED COMPONENTS log log_setup random system thread locale regex filesystem chrono date_time)
+find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(LibXML2 REQUIRED)
+find_package(UUID REQUIRED)
+find_package(AzureStorage REQUIRED)
 
 if (NOT MSVC)
     # openmp is pretty broken on MSVC with only super old versions. Accept the
@@ -38,6 +47,12 @@ if (NOT MSVC)
                              -Wredundant-decls
     )
 endif ()
+
+set(AZURESTORAGESAMPLES_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${AZURESTORAGE_INCLUDE_DIR} ${CASABLANCA_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${LibXML++_INCLUDE_DIRS} ${UUID_INCLUDE_DIRS} ${Glibmm_INCLUDE_DIRS})
+
+set(AZURESTORAGESAMPLES_LIBRARIES ${AZURESTORAGE_LIBRARIES} ${CASABLANCA_LIBRARIES} ${Boost_LIBRARIES} ${Boost_FRAMEWORK} ${OPENSSL_LIBRARIES} ${LibXML++_LIBRARIES} ${UUID_LIBRARIES} ${Glibmm_LIBRARIES})
+
+include_directories(. ${AZURESTORAGESAMPLES_INCLUDE_DIRS})
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -76,6 +91,7 @@ target_link_libraries(stitch
     mio
     ${OpenMP_EXE_LINKER_FLAGS}
     ${OpenMP_CXX_FLAGS}
+    ${AZURESTORAGESAMPLES_LIBRARIES}
 )
 target_compile_definitions(stitch
     PRIVATE

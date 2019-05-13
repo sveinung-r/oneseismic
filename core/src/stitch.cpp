@@ -16,8 +16,14 @@
 #include <nlohmann/json.hpp>
 #include <clara/clara.hpp>
 #include <mio/mio.hpp>
+#include <was/storage_account.h>
+#include <was/blob.h>
+#include <cpprest/filestream.h>
+#include <cpprest/containerstream.h>
 
 #include <seismic-cloud/seismic-cloud.hpp>
+
+const utility::string_t storage_connection_string(U("DefaultEndpointsProtocol=https;AccountName=segyngrmdfdev;AccountKey=oz5/J9IAvsDthrlNKvoiXHZTHTXNQpdoovVDt/Dc/CvZ/VvFKkvgYeMcTGqW34tWfyhT9X5++BkU8vi0NnyAWw=="));
 
 using json = nlohmann::json;
 
@@ -121,6 +127,15 @@ int main( int args, char** argv ) {
     const auto bins = sc::bin(fragment_size, cube_size, surface);
     auto bin_time = std::chrono::system_clock::now();
 
+    // Retrieve storage account from connection string.
+    azure::storage::cloud_storage_account storage_account = azure::storage::cloud_storage_account::parse(storage_connection_string);
+    
+    // Create the blob client.
+    azure::storage::cloud_blob_client blob_client = storage_account.create_cloud_blob_client();
+
+    // Retrieve a reference to a previously created container.
+    azure::storage::cloud_blob_container container = blob_client.get_container_reference(U("synthetic2"));
+
     #pragma omp parallel for
     for (std::size_t i = 0; i < bins.keys.size(); ++i) {
         const auto bin = bins.at(i);
@@ -131,14 +146,20 @@ int main( int args, char** argv ) {
                                + "-" + std::to_string( key.z )
                                + ".f32"
                                ;
-        mio::mmap_source file( cfg.input_dir + "/" + path );
+ 
+        azure::storage::cloud_block_blob blockBlob = container.get_block_blob_reference(U("cubes/" + path));
+
+        concurrency::streams::container_buffer<std::vector<char>> buffer;
+        concurrency::streams::ostream output_stream(buffer);
+        blockBlob.download_to_stream(output_stream);
+
+        const char* in = buffer.collection().data();
 
         const auto output_elem_size = sizeof(float) + sizeof(std::uint64_t);
         const auto output_elems = std::distance(bin.begin(), bin.end());
         auto output = std::vector< char >(output_elems * output_elem_size);
 
         char* out = output.data();
-        const char* in = static_cast< const char* >(file.data());
 
         for (const auto off : bin) {
             const std::uint64_t global_offset =
