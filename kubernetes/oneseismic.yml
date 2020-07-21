@@ -1,3 +1,18 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: EMAIL
+    privateKeySecretRef:
+      name: letsencrypt
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -5,12 +20,13 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/rewrite-target: /$1
-    #cert-manager.io/cluster-issuer: letsencrypt
+    cert-manager.io/cluster-issuer: letsencrypt
+    kubernetes.io/ingress.allow-http: "false"
 spec:
   tls:
-  - hosts:
-    - DOMAIN_NAME
-    secretName: aks-ingress-tls
+    - hosts:
+      - DOMAIN_NAME
+      secretName: tls-secret
   rules:
   - host: DOMAIN_NAME
     http:
@@ -20,23 +36,6 @@ spec:
           serviceName: api
           servicePort: 80
 ---
-#apiVersion: v1
-#kind: Service
-#metadata:
-#  labels:
-#    io.kompose.service: api
-#  name: api-egress
-#spec:
-#  type: LoadBalancer
-#  loadBalancerIP: PUBLIC_IP
-#  ports:
-#  - name: http
-#    port: 80
-#    nodePort: 30000
-#    targetPort: 8080
-#  selector:
-#    app: api
-#---
 apiVersion: v1
 kind: Service
 metadata:
@@ -50,6 +49,8 @@ spec:
     port: 6143
   - name: zmq2
     port: 6144
+  - name: zmq3
+    port: 6140
   - name: http
     port: 80
     targetPort: 8080
@@ -77,15 +78,15 @@ spec:
       - env:
         - name: HOST_ADDR
           value: 0.0.0.0:8080
-        - name: PROFILING
-          value: "false"
         - name: ZMQ_REP_ADDR
           value: tcp://*:6144
         - name: ZMQ_REQ_ADDR
           value: tcp://*:6143
+        - name: ZMQ_FAILURE_ADDR
+          value: tcp://*:6140
         resources:
           requests:
-            memory: "2Gi"
+            memory: "4Gi"
             cpu: "1000m"
         image: oneseismic.azurecr.io/api:latest
         imagePullPolicy: Always
@@ -125,15 +126,11 @@ spec:
         - tcp://0.0.0.0:6141
         - --fail
         - tcp://0.0.0.0:6140
-        - --account
-        - $(AZURE_STORAGE_ACCOUNT)
-        - --key
-        - $(AZURE_STORAGE_ACCESS_KEY)
         image: oneseismic.azurecr.io/base:latest
         imagePullPolicy: Always
         resources:
           requests:
-            memory: "2Gi"
+            memory: "1Gi"
             cpu: "1000m"
         envFrom:
           - secretRef:
@@ -182,15 +179,11 @@ spec:
         - tcp://0.0.0.0:6141
         - --fail
         - tcp://0.0.0.0:6140
-        - --account
-        - $(AZURE_STORAGE_ACCOUNT)
-        - --key
-        - $(AZURE_STORAGE_ACCESS_KEY)
         image: oneseismic.azurecr.io/base:latest
         imagePullPolicy: Always
         resources:
           requests:
-            memory: "2Gi"
+            memory: "1Gi"
             cpu: "1000m"
         envFrom:
           - secretRef:
