@@ -107,6 +107,7 @@ cat kubernetes/oneseismic.yml | \
 cat kubernetes/filebeat-kubernetes.yaml | \
     sed s/elasticsearch_host/$ELASTICSEARCH_HOST/ | \
     sed s/changeme/$ELASTICSEARCH_PASSWORD/ | \
+    sed s/logstash_host/$LOGSTASH_HOST/ |
     kubectl apply --validate=false -f -
 
 cat kubernetes/metricbeat-kubernetes.yaml | \

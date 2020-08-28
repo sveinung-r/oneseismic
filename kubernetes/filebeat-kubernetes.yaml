@@ -37,10 +37,8 @@ data:
     cloud.id: ${ELASTIC_CLOUD_ID}
     cloud.auth: ${ELASTIC_CLOUD_AUTH}
 
-    output.elasticsearch:
-      hosts: ['${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}']
-      username: ${ELASTICSEARCH_USERNAME}
-      password: ${ELASTICSEARCH_PASSWORD}
+    output.logstash:
+      hosts: ['${LOGSTASH_HOST}:${LOGSTASH_PORT}']
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -78,6 +76,10 @@ spec:
           value: elastic
         - name: ELASTICSEARCH_PASSWORD
           value: changeme
+        - name: LOGSTASH_HOST
+          value: logstash_host
+        - name: LOGSTASH_PORT
+          value: "5044"
         - name: ELASTIC_CLOUD_ID
           value:
         - name: ELASTIC_CLOUD_AUTH
