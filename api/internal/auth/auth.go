@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"sync"
@@ -171,16 +172,29 @@ func verifyIssuerAudience(
 
 func Authenticate(
 	tokens Tokens,
+	endpoint string,
 ) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// "Authorization: Bearer $token"
 		token := ctx.GetHeader("Authorization")
-		obotok, err := tokens.GetOnbehalf(token)
-		if err != nil {
-			AbortContextFromToken(ctx, err)
+
+		if strings.HasPrefix(token, "?") {
+			ept, err := url.Parse(endpoint + token)
+			if err != nil {
+				ctx.AbortWithStatus(http.StatusInternalServerError)
+			}
+			endpoint = ept.String()
+		} else {
+			// Token is not a SAS, so we assume it is OBO
+			var err error
+			token, err = tokens.GetOnbehalf(token)
+			if err != nil {
+				AbortContextFromToken(ctx, err)
+			}
 		}
 
-		ctx.Set("Token", obotok)
+		ctx.Set("Token", token)
+		ctx.Set("Endpoint", endpoint)
 	}
 }
 

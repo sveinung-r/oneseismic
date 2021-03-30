@@ -20,13 +20,11 @@ type Curtain struct {
 
 func MakeCurtain(
 	keyring  *auth.Keyring,
-	endpoint string,
 	storage  redis.Cmdable,
 ) *Curtain {
 	return &Curtain {
 		MakeBasicEndpoint(
 			keyring,
-			endpoint,
 			storage,
 		),
 	}
@@ -35,6 +33,7 @@ func MakeCurtain(
 func (c *Curtain) MakeTask(
 	pid       string,
 	guid      string,
+	endpoint  string,
 	token     string,
 	manifest  []byte,
 	shape     []int32,
@@ -44,6 +43,7 @@ func (c *Curtain) MakeTask(
 	task := c.BasicEndpoint.MakeTask(
 		pid,
 		guid,
+		endpoint,
 		token,
 		manifest,
 		shape,
@@ -99,8 +99,9 @@ func (p *path) zeroindexed(
 func (c *Curtain) Get(ctx *gin.Context) {
 	pid := ctx.GetString("pid")
 	guid := ctx.Param("guid")
+	endpoint := ctx.GetString("Endpoint")
 
-	m, err := util.GetManifest(ctx, c.endpoint, guid)
+	m, err := util.GetManifest(ctx, endpoint, guid)
 	if err != nil {
 		log.Printf("pid=%s %v", pid, err)
 		return
@@ -143,6 +144,7 @@ func (c *Curtain) Get(ctx *gin.Context) {
 	msg := c.MakeTask(
 		pid,
 		guid,
+		endpoint,
 		token,
 		manifest,
 		[]int32{ 64, 64, 64 },

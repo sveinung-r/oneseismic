@@ -26,13 +26,11 @@ type Slice struct {
 
 func MakeSlice(
 	keyring  *auth.Keyring,
-	endpoint string,
 	storage  redis.Cmdable,
 ) *Slice {
 	return &Slice {
 		MakeBasicEndpoint(
 			keyring,
-			endpoint,
 			storage,
 		),
 	}
@@ -80,6 +78,7 @@ func parseSliceParams(ctx *gin.Context) (*sliceParams, error) {
  */
 func (s *Slice) MakeTask(
 	pid       string,
+	endpoint  string,
 	token     string,
 	manifest  []byte,
 	shape     []int32,
@@ -89,6 +88,7 @@ func (s *Slice) MakeTask(
 	task := s.BasicEndpoint.MakeTask(
 		pid,
 		params.guid,
+		endpoint,
 		token,
 		manifest,
 		shape,
@@ -113,6 +113,7 @@ func contains(haystack []int, needle int) bool {
 
 func (s *Slice) About(ctx *gin.Context) {
 	pid := ctx.GetString("pid")
+	endpoint := ctx.GetString("Endpoint")
 	guid := ctx.Param("guid")
 	if guid == "" {
 		log.Printf("%s guid empty", pid)
@@ -120,7 +121,7 @@ func (s *Slice) About(ctx *gin.Context) {
 		return
 	}
 
-	m, err := util.GetManifest(ctx, s.endpoint, guid)
+	m, err := util.GetManifest(ctx, endpoint, guid)
 	if err != nil {
 		log.Printf("%s %v", pid, err)
 		return
@@ -140,6 +141,7 @@ func (s *Slice) About(ctx *gin.Context) {
 
 func (s *Slice) Get(ctx *gin.Context) {
 	pid := ctx.GetString("pid")
+	endpoint := ctx.GetString("Endpoint")
 
 	params, err := parseSliceParams(ctx)
 	if err != nil {
@@ -148,7 +150,7 @@ func (s *Slice) Get(ctx *gin.Context) {
 		return
 	}
 
-	m, err := util.GetManifest(ctx, s.endpoint, params.guid)
+	m, err := util.GetManifest(ctx, endpoint, params.guid)
 	if err != nil {
 		log.Printf("%s %v", pid, err)
 		return
@@ -199,6 +201,7 @@ func (s *Slice) Get(ctx *gin.Context) {
 	}
 	msg := s.MakeTask(
 		pid,
+		endpoint,
 		token,
 		manifest,
 		[]int32{ 64, 64, 64 },

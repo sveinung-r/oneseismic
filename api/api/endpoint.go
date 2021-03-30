@@ -15,7 +15,6 @@ import (
 )
 
 type BasicEndpoint struct {
-	endpoint string // e.g. https://oneseismic-storage.blob.windows.net
 	keyring  *auth.Keyring
 	tokens   auth.Tokens
 	sched    scheduler
@@ -23,11 +22,9 @@ type BasicEndpoint struct {
 
 func MakeBasicEndpoint(
 	keyring *auth.Keyring,
-	endpoint string,
 	storage  redis.Cmdable,
 ) BasicEndpoint {
 	return BasicEndpoint {
-		endpoint: endpoint,
 		keyring: keyring,
 		/*
 		 * Scheduler should probably be exported (and in internal/?) and be
@@ -40,6 +37,7 @@ func MakeBasicEndpoint(
 func (be *BasicEndpoint) MakeTask(
 	pid       string,
 	guid      string,
+	endpoint  string,
 	token     string,
 	manifest  []byte,
 	shape     []int32,
@@ -49,7 +47,7 @@ func (be *BasicEndpoint) MakeTask(
 		Pid:             pid,
 		Token:           token,
 		Guid:            guid,
-		StorageEndpoint: be.endpoint,
+		StorageEndpoint: endpoint,
 		Manifest:        string(manifest),
 		Shape:           shape,
 		ShapeCube:       shapecube,
@@ -58,6 +56,7 @@ func (be *BasicEndpoint) MakeTask(
 
 func (be *BasicEndpoint) Root(ctx *gin.Context) {
 	pid := ctx.GetString("pid")
+	endpoint := ctx.GetString("Endpoint")
 
 	guid := ctx.Param("guid")
 	if guid == "" {
@@ -66,7 +65,7 @@ func (be *BasicEndpoint) Root(ctx *gin.Context) {
 		return
 	}
 
-	m, err := util.GetManifest(ctx, be.endpoint, guid)
+	m, err := util.GetManifest(ctx, endpoint, guid)
 	if err != nil {
 		log.Printf("%s %v", pid, err)
 		return
@@ -92,7 +91,8 @@ func (be *BasicEndpoint) Root(ctx *gin.Context) {
 
 func (be *BasicEndpoint) List(ctx *gin.Context) {
 	pid := ctx.GetString("pid")
-	endpoint, err := url.Parse(be.endpoint)
+	ep := ctx.GetString("Endpoint")
+	endpoint, err := url.Parse(ep)
 	if err != nil {
 		log.Printf("pid=%s %v", pid, err)
 		ctx.AbortWithStatus(http.StatusInternalServerError)
@@ -117,6 +117,7 @@ func (be *BasicEndpoint) List(ctx *gin.Context) {
 
 func (s *BasicEndpoint) Entry(ctx *gin.Context) {
 	pid := ctx.GetString("pid")
+	endpoint := ctx.GetString("Endpoint")
 
 	guid := ctx.Param("guid")
 	if guid == "" {
@@ -125,7 +126,7 @@ func (s *BasicEndpoint) Entry(ctx *gin.Context) {
 		return
 	}
 
-	m, err := util.GetManifest(ctx, s.endpoint, guid)
+	m, err := util.GetManifest(ctx, endpoint, guid)
 	if err != nil {
 		log.Printf("%s %v", pid, err)
 		return

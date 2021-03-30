@@ -186,9 +186,9 @@ func main() {
 		},
 	)
 
-	basic := api.MakeBasicEndpoint(&keyring, opts.storageURL, cmdable)
-	slice := api.MakeSlice(&keyring, opts.storageURL, cmdable)
-	curtain := api.MakeCurtain(&keyring, opts.storageURL, cmdable)
+	basic := api.MakeBasicEndpoint(&keyring, cmdable)
+	slice := api.MakeSlice(&keyring, cmdable)
+	curtain := api.MakeCurtain(&keyring, cmdable)
 	result := api.Result {
 		Timeout: time.Second * 15,
 		StorageURL: opts.storageURL,
@@ -211,7 +211,7 @@ func main() {
 
 	validate := auth.ValidateJWT(openidcfg.Jwks, openidcfg.Issuer, opts.audience)
 	tokens := auth.NewTokens(openidcfg.TokenEndpoint, opts.clientID, opts.clientSecret)
-	setAuth := auth.Authenticate(tokens)
+	setAuth := auth.Authenticate(tokens, opts.storageURL)
 	queries := app.Group("/query")
 	queries.Use(validate)
 	queries.Use(setAuth)
