@@ -209,11 +209,11 @@ func main() {
 
 	app := gin.Default()
 
-	validate := auth.ValidateJWT(openidcfg.Jwks, openidcfg.Issuer, opts.audience)
+	//validate := auth.ValidateJWT(openidcfg.Jwks, openidcfg.Issuer, opts.audience)
 	tokens := auth.NewTokens(openidcfg.TokenEndpoint, opts.clientID, opts.clientSecret)
 	setAuth := auth.Authenticate(tokens, opts.storageURL)
 	queries := app.Group("/query")
-	queries.Use(validate)
+	//queries.Use(validate)
 	queries.Use(setAuth)
 	queries.Use(util.GeneratePID)
 	queries.Use(util.QueryLogger)

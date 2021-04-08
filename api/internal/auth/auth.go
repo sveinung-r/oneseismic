@@ -176,25 +176,37 @@ func Authenticate(
 ) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// "Authorization: Bearer $token"
-		token := ctx.GetHeader("Authorization")
+		authorization := ctx.GetHeader("Authorization")
+		storage := endpoint
+		token := ""
+		_, err := fmt.Sscanf(authorization, "Bearer %s", &token)
+
+		if err != nil {
+			log.Printf(
+				"Malformed header Authorization; was %s",
+				authorization,
+			)
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 		if strings.HasPrefix(token, "?") {
 			ept, err := url.Parse(endpoint + token)
 			if err != nil {
 				ctx.AbortWithStatus(http.StatusInternalServerError)
+				return
 			}
-			endpoint = ept.String()
+			storage = ept.String()
 		} else {
 			// Token is not a SAS, so we assume it is OBO
-			var err error
 			token, err = tokens.GetOnbehalf(token)
 			if err != nil {
 				AbortContextFromToken(ctx, err)
 			}
+			ctx.Set("Token", token)
 		}
 
-		ctx.Set("Token", token)
-		ctx.Set("Endpoint", endpoint)
+		ctx.Set("Endpoint", storage)
 	}
 }
 

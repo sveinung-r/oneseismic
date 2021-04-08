@@ -108,11 +108,19 @@ func Compression() gin.HandlerFunc {
 func FetchManifest(
 	ctx context.Context,
 	token string,
-	containerURL *url.URL,
+	endpoint string,
+	guid string,
 ) ([]byte, error) {
-	credentials := azblob.NewTokenCredential(token, nil)
+	var credentials azblob.Credential
+	if token == "" {
+		credentials = azblob.NewAnonymousCredential()
+	} else {
+		credentials = azblob.NewTokenCredential(token, nil)
+	}
 	pipeline    := azblob.NewPipeline(credentials, azblob.PipelineOptions{})
-	container   := azblob.NewContainerURL(*containerURL, pipeline)
+	ep, _ := url.Parse(endpoint)
+	storageacc  := azblob.NewServiceURL(*ep, pipeline)
+	container   := storageacc.NewContainerURL(guid)
 	blob        := container.NewBlobURL("manifest.json")
 
 	dl, err := blob.Download(
@@ -198,14 +206,9 @@ func GetManifest(
 	endpoint string,
 	guid     string,
 ) (*message.Manifest, error) {
-	container, err := url.Parse(fmt.Sprintf("%s/%s", endpoint, guid))
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return nil, err
-	}
 
 	token := ctx.GetString("Token")
-	manifest, err := FetchManifest(ctx, token, container)
+	manifest, err := FetchManifest(ctx, token, endpoint, guid)
 
 	if err != nil {
 		auth.AbortContextFromToken(ctx, err)
@@ -258,7 +261,12 @@ func ListCubes(
 	endpoint *url.URL, // typically https://<account>.blob.core.windows.net
 	token    string,
 ) ([]string, error) {
-	credentials := azblob.NewTokenCredential(token, nil)
+	var credentials azblob.Credential
+	if token == "" {
+		credentials = azblob.NewAnonymousCredential()
+	} else {
+		credentials = azblob.NewTokenCredential(token, nil)
+	}
 	pipeline    := azblob.NewPipeline(credentials, azblob.PipelineOptions{})
 	storageacc  := azblob.NewServiceURL(*endpoint, pipeline)
 
