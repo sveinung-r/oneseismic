@@ -199,7 +199,7 @@ func Authenticate(
 			storage = ept.String()
 		} else {
 			// Token is not a SAS, so we assume it is OBO
-			token, err = tokens.GetOnbehalf(token)
+			token, err = tokens.GetOnbehalf(fmt.Sprintf("Bearer %s", token))
 			if err != nil {
 				AbortContextFromToken(ctx, err)
 			}
