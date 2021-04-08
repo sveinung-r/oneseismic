@@ -38,12 +38,8 @@ func (s *statusError) Error() string {
 }
 
 type Tokens interface {
-	// Get an on-behalf-of token, possibly from cache. The token may have
-	// expired, be bad, or revoked, in which case it must be manually evicted.
+	// Get an on-behalf-of token, possibly from cache. 
 	GetOnbehalf(auth string) (string, error)
-	// Invalidate a user token. This evicts the key from the cache, and makes
-	// the next invocation of GetOnbehalf() fetch a fresh token.
-	Invalidate(auth string)
 }
 
 type TokenFetch struct {
@@ -87,14 +83,6 @@ func (t *TokenFetch) GetOnbehalf(token string) (string, error) {
 		}
 	}
 
-	if err := checkAuthorizationHeader(token); err != nil {
-		// TODO: should the authorization header itself be logged?
-		return "", &statusError {
-			status: http.StatusBadRequest,
-			message: fmt.Sprintf("%v", err),
-		}
-	}
-
 	/*
 	 * TODO: this could use some more tests to make sure that error paths are
 	 * properly taken and errors are properly set. Unfortunately, it's mostly
@@ -105,7 +93,7 @@ func (t *TokenFetch) GetOnbehalf(token string) (string, error) {
 		t.loginAddr,
 		t.clientID,
 		t.clientSecret,
-		strings.Split(token, " ")[1],
+		token,
 	)
 	if err != nil {
 		return "", &statusError {
@@ -171,6 +159,7 @@ func verifyIssuerAudience(
 }
 
 func Authenticate(
+	validateJwt gin.HandlerFunc,
 	tokens Tokens,
 	endpoint string,
 ) gin.HandlerFunc {
@@ -199,9 +188,11 @@ func Authenticate(
 			storage = ept.String()
 		} else {
 			// Token is not a SAS, so we assume it is OBO
-			token, err = tokens.GetOnbehalf(fmt.Sprintf("Bearer %s", token))
+			validateJwt(ctx)
+			token, err = tokens.GetOnbehalf(token)
 			if err != nil {
 				AbortContextFromToken(ctx, err)
+				return
 			}
 			ctx.Set("Token", token)
 		}
@@ -266,23 +257,6 @@ func ValidateJWT(
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 		}
 	}
-}
-
-/*
- * Check that the authorization header is well-formatted
- */
-func checkAuthorizationHeader(authorization string) error {
-	// TODO: ensure that the CheckJWT function checks the authorization header
-	// suffienctly well
-	if authorization == "" {
-		return fmt.Errorf("Request without JWT header, but passed validation")
-	}
-
-	if !strings.HasPrefix(authorization, "Bearer") {
-		return fmt.Errorf("Authorization not a Bearer token")
-	}
-
-	return nil
 }
 
 func fetchOnBehalfToken(
