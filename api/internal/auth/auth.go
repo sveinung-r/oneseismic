@@ -254,7 +254,7 @@ func ValidateJWT(
 	return func (ctx *gin.Context) {
 		if err := auth.CheckJWT(ctx.Writer, ctx.Request); err != nil {
 			log.Printf("checkJWT() failed: %v", err)
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+			ctx.AbortWithStatus(http.StatusBadRequest)
 		}
 	}
 }
