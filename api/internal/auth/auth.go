@@ -175,7 +175,7 @@ func Authenticate(
 				"Malformed header Authorization; was %s",
 				authorization,
 			)
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+			ctx.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 
